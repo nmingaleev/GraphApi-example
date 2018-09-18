@@ -8,6 +8,11 @@
 <body style="margin: 40px">
     <button id="callGraphButton" type="button" class="btn btn-primary" onclick="callGraphApi()">Call Microsoft Graph API</button>
     <button id="getCalendarsButton" type="button" class="btn btn-primary" onclick="getCalendarsGraphApi()">Get Calendars</button>
+    <button id="getEventsForCalenar" type="button" class="btn btn-primary" onclick="getAllEvents()">Get All Events</button>
+    <button id="createEvent" type="button" class="btn btn-primary" onclick="createEventForCalendar()">Create Event</button>
+    <button id="updateEvent" type="button" class="btn btn-primary" onclick="updateEventApi()">Update Event</button>
+    <button id="deleteEvent" type="button" class="btn btn-primary" onclick="deleteEventApi()">Delete Event</button>
+
     <div id="errorMessage" class="text-danger"></div>
     <div class="hidden">
         <h3>Graph API Call Response</h3>
@@ -21,6 +26,19 @@
         <h3>ID Token Claims</h3>
         <pre class="well" id="userInfo"></pre>
     </div>
+
+
+    <div>
+        <h3>Calendars</h3>
+        <pre class="well" id="calendars"></pre>
+    </div>
+
+    <div>
+        <h3>Events</h3>
+        <pre class="well" id="events"></pre>
+    </div>
+
+
     <button id="signOutButton" type="button" class="btn btn-primary hidden" onclick="signOut()">Sign out</button>
 
     <!-- This app uses cdn to reference msal.js (recommended).

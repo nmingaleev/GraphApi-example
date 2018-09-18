@@ -2,9 +2,12 @@
 var graphApiEndpoint = "https://graph.microsoft.com/v1.0";
 
 // Graph API scope used to obtain the access token to read user profile
-var graphAPIScopes = ["https://graph.microsoft.com/user.read"];
+var graphAPIScopes = ["https://graph.microsoft.com/user.read", "https://graph.microsoft.com/calendars.readwrite"];
 
 var userApiResponse;
+var userCalendars = [];
+
+var createEvent;
 
 // Initialize application
 var userAgentApplication = new Msal.UserAgentApplication(msalconfig.clientID, null, loginCallback, {
@@ -173,20 +176,183 @@ function getCalendars(endpoint, token) {
 	endpoint = endpoint + "/users/" + userApiResponse.id + "/calendars";
 
 	fetch(endpoint, options).then(response => {
-		console.log(response);
+		response.json().then(data => {
+			userCalendars = data.value;
+
+			document.getElementById("calendars").innerHTML = JSON.stringify(userCalendars);
+
+			console.log("Календари", data);
+		});
 	});
 }
 
 function getCalendarsGraphApi() {
 	userAgentApplication.acquireTokenSilent(graphAPIScopes)
 		.then(function (token) {
-			console.log(userApiResponse);
 			getCalendars(graphApiEndpoint, token);
 		}, function (error) {
 			if (error) {
 				userAgentApplication.acquireTokenRedirect(graphAPIScopes);
 			}
 		});
+}
+
+function getAllEvents() {
+	userAgentApplication.acquireTokenSilent(graphAPIScopes)
+		.then(function (token) {
+			for (var i = 0; i < userCalendars.length; i++) {
+				getEventsByCalendarId(userCalendars[i].id, graphApiEndpoint, token);
+			}
+		}, function (error) {
+			if (error) {
+				userAgentApplication.acquireTokenRedirect(graphAPIScopes);
+			}
+		});
+}
+
+function getEventsByCalendarId(id, endpoint, token) {
+	var headers = new Headers();
+	var bearer = "Bearer " + token;
+	headers.append("Authorization", bearer);
+	var options = {
+		method: "GET",
+		headers: headers
+	};
+
+	endpoint = endpoint + "/users/" + userApiResponse.id + "/calendars/" + id + "/events";
+
+	fetch(endpoint, options).then(response => {
+		response.json().then(data => {
+			document.getElementById("events").innerHTML = document.getElementById("events").innerHTML + JSON.stringify(data);
+			console.log("События", data);
+		});
+	});
+}
+
+function createEventForCalendar() {
+	userAgentApplication.acquireTokenSilent(graphAPIScopes)
+		.then(function (token) {
+			createEvent(userCalendars[0].id, userApiResponse.id, graphApiEndpoint, token);
+		}, function (error) {
+			if (error) {
+				userAgentApplication.acquireTokenRedirect(graphAPIScopes);
+			}
+		});
+}
+
+function createEvent(calendarId, userId, endpoint, token) {
+	var headers = new Headers();
+	var bearer = "Bearer " + token;
+	headers.append("Authorization", bearer);
+	headers.append("Content-Type", 'application/json');
+
+	var event = {
+		"subject": "Let's go for lunch",
+		"body": {
+			"contentType": "HTML",
+			"content": "Does late morning work for you?"
+		},
+		"start": {
+			"dateTime": new Date().toISOString(),
+			"timeZone": "Pacific Standard Time"
+		},
+		"end": {
+			"dateTime": new Date(new Date().setHours(new Date().getHours() + 1)).toISOString(),
+			"timeZone": "Pacific Standard Time"
+		},
+		"location": {
+			"displayName": "Harry's Bar"
+		},
+		"attendees": [
+			{
+				"emailAddress": {
+					"address": "samanthab@contoso.onmicrosoft.com",
+					"name": "Samantha Booth"
+				},
+				"type": "required"
+			}
+		]
+	};
+
+	var options = {
+		method: "POST",
+		headers: headers,
+		body: JSON.stringify(event)
+	};
+
+	endpoint = `${endpoint}/users/${userId}/calendars/${calendarId}/events`;
+
+	fetch(endpoint, options).then(response => {
+		response.json().then(event => {
+			createdEvent = event;
+			console.log("Событие создано", event);
+		});
+	});
+}
+
+function updateEventApi() {
+	userAgentApplication.acquireTokenSilent(graphAPIScopes)
+		.then(function (token) {
+			updateEvent(userApiResponse.id, userCalendars[0].id, createdEvent.id, graphApiEndpoint, token);
+		}, function (error) {
+			if (error) {
+				userAgentApplication.acquireTokenRedirect(graphAPIScopes);
+			}
+		});
+}
+
+function updateEvent(userId, calendarId, eventId, endpoint, token) {
+	var headers = new Headers();
+	var bearer = "Bearer " + token;
+	headers.append("Authorization", bearer);
+	headers.append("Content-Type", 'application/json');
+
+	var updateInfo = {
+		subject: "Event was updated"
+	};
+
+	var options = {
+		method: "PATCH",
+		headers: headers,
+		body: JSON.stringify(updateInfo)
+	};
+
+	endpoint = `${endpoint}/users/${userId}/calendars/${calendarId}/events/${eventId}`;
+
+	fetch(endpoint, options).then(response => {
+		response.json().then(event => {
+			createdEvent = event;
+			console.log("Обновленное событие", event);
+		});
+	});
+}
+
+function deleteEventApi() {
+	userAgentApplication.acquireTokenSilent(graphAPIScopes)
+		.then(function (token) {
+			deleteEvent(userApiResponse.id, userCalendars[0].id, createdEvent.id, graphApiEndpoint, token);
+		}, function (error) {
+			if (error) {
+				userAgentApplication.acquireTokenRedirect(graphAPIScopes);
+			}
+		});
+}
+
+function deleteEvent(userId, calendarId, eventId, endpoint, token) {
+	var headers = new Headers();
+	var bearer = "Bearer " + token;
+	headers.append("Authorization", bearer);
+
+	var options = {
+		method: "DELETE",
+		headers: headers
+	};
+
+	endpoint = `${endpoint}/users/${userId}/calendars/${calendarId}/events/${eventId}`;
+
+	fetch(endpoint, options).then(response => {
+		console.log("Удаленное событие", response);
+	});
 }
 
 
